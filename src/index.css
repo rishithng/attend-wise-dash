@@ -2,33 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Professional Attendance Manager Design System
+/* Enhanced Attendance Manager Design System with Animations
 All colors MUST be HSL for consistency
 */
 
 @layer base {
   :root {
-    /* Background system */
+    /* Enhanced background system with gradients */
     --background: 220 20% 98%;
     --background-panel: 0 0% 100%;
-    --background-gradient: linear-gradient(135deg, hsl(220 20% 98%) 0%, hsl(210 25% 96%) 100%);
+    --background-gradient: linear-gradient(135deg, hsl(220 20% 98%) 0%, hsl(210 25% 96%) 20%, hsl(200 30% 94%) 100%);
+    --background-hero: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(200 100% 65%) 50%, hsl(180 100% 70%) 100%);
+    --background-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
     --foreground: 220 15% 20%;
 
-    /* Card system */
+    /* Card system with enhanced shadows */
     --card: 0 0% 100%;
     --card-foreground: 220 15% 20%;
     --card-shadow: 220 15% 85%;
+    --card-shadow-hover: 220 15% 75%;
 
-    /* Professional blue color palette */
+    /* Professional color palette */
     --primary: 217 91% 60%;
     --primary-hover: 217 91% 55%;
     --primary-foreground: 0 0% 100%;
     --primary-soft: 217 91% 95%;
+    --primary-glow: 217 91% 75%;
 
     /* Success states */
     --success: 142 76% 36%;
+    --success-hover: 142 76% 32%;
     --success-foreground: 0 0% 100%;
     --success-soft: 142 76% 95%;
+
+    /* Warning states */
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 45 93% 95%;
+
+    /* Department colors */
+    --dept-cse: 220 100% 60%;
+    --dept-ise: 280 100% 60%;  
+    --dept-ec: 340 100% 60%;
+    --dept-eee: 45 100% 50%;
+    --dept-csbs: 160 100% 40%;
+    --dept-ei: 30 100% 55%;
 
     /* Secondary system */
     --secondary: 220 15% 96%;
@@ -51,6 +69,13 @@ All colors MUST be HSL for consistency
     --border: 220 15% 90%;
     --input: 220 15% 95%;
     --ring: 217 91% 60%;
+
+    /* Animation system */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+    --shadow-card: 0 4px 6px -1px hsl(var(--card-shadow) / 0.1), 0 2px 4px -1px hsl(var(--card-shadow) / 0.06);
+    --shadow-card-hover: 0 10px 15px -3px hsl(var(--card-shadow-hover) / 0.1), 0 4px 6px -2px hsl(var(--card-shadow-hover) / 0.05);
 
     --radius: 0.5rem;
 
@@ -110,6 +135,29 @@ All colors MUST be HSL for consistency
   }
 }
 
+/* Custom animations and utilities */
+@layer components {
+  .animate-fade-in {
+    @apply animate-[fadeIn_0.5s_ease-out];
+  }
+  
+  .animate-slide-up {
+    @apply animate-[slideUp_0.6s_cubic-bezier(0.4,0,0.2,1)];
+  }
+  
+  .animate-bounce-in {
+    @apply animate-[bounceIn_0.6s_cubic-bezier(0.68,-0.55,0.265,1.55)];
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -117,5 +165,45 @@ All colors MUST be HSL for consistency
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
