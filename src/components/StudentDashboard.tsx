@@ -1,21 +1,21 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { LogOut, Calendar, BarChart3, User } from "lucide-react";
-import { useAttendance } from "@/context/AttendanceContext";
 import { AttendanceMarker } from "./AttendanceMarker";
 import { AttendanceChart } from "./AttendanceChart";
+import { NotificationPanel } from "./NotificationPanel";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, User } from "lucide-react";
+import { useAttendance } from "@/context/AttendanceContext";
 import { DEPARTMENT_COLORS } from "@/types/attendance";
 
 export const StudentDashboard = () => {
-  const { logout, currentUser, getStudentAttendance } = useAttendance();
+  const { logout, currentUser, getStudentAttendance, getWeeklyAttendance } = useAttendance();
   
-  const studentAttendance = getStudentAttendance(currentUser?.id || "");
-  const thisMonth = new Date().getMonth();
-  const thisYear = new Date().getFullYear();
-  const monthlyAttendance = studentAttendance.filter(record => 
-    record.timestamp.getMonth() === thisMonth && record.timestamp.getFullYear() === thisYear
+  const weeklyData = getWeeklyAttendance(currentUser?.id || "");
+  const todayAttendance = getStudentAttendance(currentUser?.id || "");
+  const today = new Date().toDateString();
+  const todayRecord = todayAttendance.find(record => 
+    record.timestamp.toDateString() === today
   );
 
   return (
@@ -23,7 +23,8 @@ export const StudentDashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">
+          <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
+            <User className="h-8 w-8" />
             Welcome, {currentUser?.name}!
           </h1>
           <div className="flex items-center gap-2 mt-2">
@@ -46,58 +47,76 @@ export const StudentDashboard = () => {
         </Button>
       </div>
 
-      {/* Dashboard Content */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Attendance Marker */}
-        <div className="lg:col-span-1">
+        {/* Left Column - Mark Attendance */}
+        <div className="lg:col-span-1 space-y-6">
           <AttendanceMarker />
+          <NotificationPanel />
         </div>
 
-        {/* Analytics */}
-        <div className="lg:col-span-2">
-          <Tabs defaultValue="weekly" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="weekly" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Weekly View
-              </TabsTrigger>
-              <TabsTrigger value="monthly" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Monthly Stats
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="weekly">
-              <AttendanceChart studentId={currentUser?.id} />
-            </TabsContent>
-
-            <TabsContent value="monthly">
-              <Card className="animate-fade-in">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    Monthly Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-success">{monthlyAttendance.length}</div>
-                      <p className="text-sm text-muted-foreground">Days Present</p>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">
-                        {monthlyAttendance.length > 0 ? 
-                          ((monthlyAttendance.length / new Date(thisYear, thisMonth + 1, 0).getDate()) * 100).toFixed(1) 
-                          : 0}%
-                      </div>
-                      <p className="text-sm text-muted-foreground">Attendance Rate</p>
-                    </div>
+        {/* Right Column - Stats and Chart */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Student Stats */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="animate-slide-up">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">This Week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Present:</span>
+                    <span className="font-semibold text-success">{weeklyData.filter(d => d.present).length}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Total Days:</span>
+                    <span className="font-semibold">{weeklyData.length}</span>
+                  </div>
+                  <div className="w-full bg-muted/50 rounded-full h-2">
+                    <div 
+                      className="h-2 rounded-full bg-gradient-to-r from-success to-success-glow" 
+                      style={{ width: `${(weeklyData.filter(d => d.present).length / weeklyData.length) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground">
+                    {Math.round((weeklyData.filter(d => d.present).length / weeklyData.length) * 100)}% attendance
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Today</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-success mb-2">
+                    {todayRecord ? "Present" : "Not Marked"}
+                  </div>
+                  {todayRecord && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">
+                        Marked at {todayRecord.timestamp.toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                      {todayRecord.className && (
+                        <p className="text-xs text-muted-foreground">
+                          Class: {todayRecord.className}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Weekly Chart */}
+          <AttendanceChart />
         </div>
       </div>
     </div>

@@ -1,16 +1,25 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Student, AttendanceRecord, User, Department } from '../types/attendance';
+import { Student, AttendanceRecord, User, Department, Class, DailyCode } from '../types/attendance';
 
 interface AttendanceContextType {
   // Auth state
   currentUser: User | null;
-  login: (user: User) => void;
+  login: (user: User, dailyCode?: string) => void;
   logout: () => void;
   
   // Students management
   students: Student[];
   addStudent: (student: Omit<Student, 'id' | 'dateAdded'>) => void;
   getStudentsByDepartment: (department: Department) => Student[];
+  
+  // Class management
+  classes: Class[];
+  addClassToDepartment: (className: string, department: Department) => void;
+  getClassesByDepartment: (department: Department) => Class[];
+  
+  // Daily code management
+  dailyCode: DailyCode | null;
+  generateDailyCode: () => void;
   
   // Attendance management
   attendanceRecords: AttendanceRecord[];
@@ -21,6 +30,11 @@ interface AttendanceContextType {
   // Statistics
   getTodayAttendance: () => AttendanceRecord[];
   getDepartmentStats: () => { department: Department; totalStudents: number; presentToday: number }[];
+  
+  // Notifications
+  notifications: string[];
+  addNotification: (message: string) => void;
+  clearNotifications: () => void;
 }
 
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
@@ -43,9 +57,23 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({ children
     { id: 'ST004', name: 'David Wilson', department: 'EEE', dateAdded: new Date('2024-02-15') },
     { id: 'ST005', name: 'Eva Brown', department: 'CSBS', dateAdded: new Date('2024-03-01') },
   ]);
+  const [classes, setClasses] = useState<Class[]>([
+    // Sample classes
+    { id: 'CL001', name: 'Data Structures', department: 'CSE', dateCreated: new Date() },
+    { id: 'CL002', name: 'Operating Systems', department: 'CSE', dateCreated: new Date() },
+    { id: 'CL003', name: 'Digital Electronics', department: 'EC', dateCreated: new Date() },
+  ]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [dailyCode, setDailyCode] = useState<DailyCode | null>(null);
+  const [notifications, setNotifications] = useState<string[]>([]);
 
-  const login = (user: User) => {
+  const login = (user: User, enteredCode?: string) => {
+    if (user.type === 'student') {
+      // Check daily code for students
+      if (!dailyCode || enteredCode !== dailyCode.code || new Date() > dailyCode.expiresAt) {
+        throw new Error('Invalid or expired daily code');
+      }
+    }
     setCurrentUser(user);
   };
 
@@ -64,6 +92,41 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const getStudentsByDepartment = (department: Department) => {
     return students.filter(student => student.department === department);
+  };
+
+  const addClassToDepartment = (className: string, department: Department) => {
+    const newClass: Class = {
+      id: `CL${String(classes.length + 1).padStart(3, '0')}`,
+      name: className,
+      department,
+      dateCreated: new Date(),
+    };
+    setClasses(prev => [...prev, newClass]);
+  };
+
+  const getClassesByDepartment = (department: Department) => {
+    return classes.filter(cls => cls.department === department);
+  };
+
+  const generateDailyCode = () => {
+    const code = Math.random().toString(36).substr(2, 8).toUpperCase();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    setDailyCode({
+      code,
+      date: new Date().toDateString(),
+      expiresAt: tomorrow,
+    });
+  };
+
+  const addNotification = (message: string) => {
+    setNotifications(prev => [message, ...prev.slice(0, 9)]); // Keep last 10
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
   };
 
   const markAttendance = (recordData: Omit<AttendanceRecord, 'id' | 'timestamp'>) => {
@@ -85,6 +148,9 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({ children
       timestamp: new Date(),
     };
     setAttendanceRecords(prev => [newRecord, ...prev]);
+    
+    // Add notifications
+    addNotification(`${recordData.studentName} marked attendance at ${new Date().toLocaleTimeString()}`);
   };
 
   const getStudentAttendance = (studentId: string) => {
@@ -136,12 +202,20 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({ children
     students,
     addStudent,
     getStudentsByDepartment,
+    classes,
+    addClassToDepartment,
+    getClassesByDepartment,
+    dailyCode,
+    generateDailyCode,
     attendanceRecords,
     markAttendance,
     getStudentAttendance,
     getWeeklyAttendance,
     getTodayAttendance,
     getDepartmentStats,
+    notifications,
+    addNotification,
+    clearNotifications,
   };
 
   return (

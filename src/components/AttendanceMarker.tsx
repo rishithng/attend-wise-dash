@@ -1,28 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, CheckCircle, Clock, Calendar } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CheckCircle, Clock, Calendar, Wifi, Building2 } from "lucide-react";
 import { useAttendance } from "@/context/AttendanceContext";
 import { useToast } from "@/hooks/use-toast";
 
-interface LocationState {
-  latitude: number;
-  longitude: number;
-  address: string;
-  loading: boolean;
-  error: string | null;
-}
-
 export const AttendanceMarker = () => {
-  const { currentUser, markAttendance, getStudentAttendance } = useAttendance();
-  const [location, setLocation] = useState<LocationState>({
-    latitude: 0,
-    longitude: 0,
-    address: "",
-    loading: false,
-    error: null,
-  });
+  const { currentUser, markAttendance, getStudentAttendance, getClassesByDepartment } = useAttendance();
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [isMarking, setIsMarking] = useState(false);
   const { toast } = useToast();
 
@@ -33,61 +20,14 @@ export const AttendanceMarker = () => {
     record => record.timestamp.toDateString() === today
   );
 
-  const getCurrentLocation = async () => {
-    setLocation(prev => ({ ...prev, loading: true, error: null }));
-
-    if (!navigator.geolocation) {
-      setLocation(prev => ({
-        ...prev,
-        loading: false,
-        error: "Geolocation is not supported by this browser"
-      }));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          // Simulate reverse geocoding (in real app, use Google Maps API)
-          const address = `Campus Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-          
-          setLocation({
-            latitude,
-            longitude,
-            address,
-            loading: false,
-            error: null,
-          });
-        } catch (error) {
-          setLocation(prev => ({
-            ...prev,
-            loading: false,
-            error: "Failed to get address"
-          }));
-        }
-      },
-      (error) => {
-        setLocation(prev => ({
-          ...prev,
-          loading: false,
-          error: "Failed to get location. Please enable location services."
-        }));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
-    );
-  };
+  // Get classes for current user's department
+  const userClasses = currentUser?.department ? getClassesByDepartment(currentUser.department) : [];
 
   const handleMarkAttendance = async () => {
-    if (!currentUser || !location.latitude) {
+    if (!currentUser) {
       toast({
         title: "Error",
-        description: "Location not available",
+        description: "User not logged in",
         variant: "destructive",
       });
       return;
@@ -100,11 +40,7 @@ export const AttendanceMarker = () => {
         studentId: currentUser.id,
         studentName: currentUser.name || "",
         department: currentUser.department!,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          address: location.address,
-        },
+        className: selectedClass || undefined,
       });
 
       toast({
@@ -121,12 +57,6 @@ export const AttendanceMarker = () => {
       setIsMarking(false);
     }
   };
-
-  useEffect(() => {
-    if (!alreadyMarked) {
-      getCurrentLocation();
-    }
-  }, [alreadyMarked]);
 
   if (alreadyMarked) {
     const todayRecord = todayAttendance.find(record => 
@@ -155,10 +85,12 @@ export const AttendanceMarker = () => {
                 })}
               </div>
               
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                {todayRecord.location.address}
-              </div>
+              {todayRecord.className && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Building2 className="h-4 w-4" />
+                  Class: {todayRecord.className}
+                </div>
+              )}
 
               <Badge variant="outline" className="bg-success/10 text-success border-success/20">
                 Present Today
@@ -190,44 +122,42 @@ export const AttendanceMarker = () => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Location Status */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <MapPin className="h-4 w-4 text-primary" />
-            Location Status
-          </div>
-          
-          {location.loading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              Getting your location...
-            </div>
-          )}
-          
-          {location.error && (
-            <div className="space-y-2">
-              <p className="text-sm text-destructive">{location.error}</p>
-              <Button variant="outline" onClick={getCurrentLocation} size="sm">
-                <MapPin className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          )}
-          
-          {location.address && !location.loading && (
-            <div className="space-y-2">
-              <p className="text-sm text-success">📍 Location detected</p>
-              <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                {location.address}
+        {/* Network Disclaimer */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Wifi className="h-5 w-5 text-primary mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-primary">Network Requirements</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Please ensure you are connected to the college network and physically present on campus to mark attendance.
               </p>
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Class Selection */}
+        {userClasses.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select Class (Optional)</label>
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Choose a class" />
+              </SelectTrigger>
+              <SelectContent>
+                {userClasses.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.name}>
+                    {cls.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Mark Attendance Button */}
         <Button
           onClick={handleMarkAttendance}
-          disabled={isMarking || !location.latitude || location.loading}
+          disabled={isMarking}
           variant="attendance"
           size="xl"
           className="w-full"
@@ -246,7 +176,7 @@ export const AttendanceMarker = () => {
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
-          Make sure you're at the correct location before marking attendance
+          Attendance will be recorded with current date and time
         </p>
       </CardContent>
     </Card>

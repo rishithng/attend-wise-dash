@@ -10,12 +10,21 @@ export interface AttendanceRecord {
   studentId: string;
   studentName: string;
   department: Department;
+  className?: string;
   timestamp: Date;
-  location: {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  };
+}
+
+export interface Class {
+  id: string;
+  name: string;
+  department: Department;
+  dateCreated: Date;
+}
+
+export interface DailyCode {
+  code: string;
+  date: string;
+  expiresAt: Date;
 }
 
 export type Department = 'CSE' | 'ISE' | 'EC' | 'EEE' | 'CSBS' | 'EI';

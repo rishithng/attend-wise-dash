@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, GraduationCap, LogIn, Building2 } from "lucide-react";
+import { Shield, GraduationCap, LogIn, Building2, Key } from "lucide-react";
 import { useAttendance } from "@/context/AttendanceContext";
 import { DEPARTMENTS, Department } from "@/types/attendance";
 import { useToast } from "@/hooks/use-toast";
@@ -16,12 +16,14 @@ export const LoginPage = () => {
   const [studentName, setStudentName] = useState("");
   const [department, setDepartment] = useState<Department | "">("");
   const [adminPassword, setAdminPassword] = useState("");
-  const { login, students } = useAttendance();
+  const [dailyCode, setDailyCode] = useState("");
+  const { login, students, generateDailyCode } = useAttendance();
   const { toast } = useToast();
 
   const handleAdminLogin = () => {
     if (adminPassword === "admin123") { // Simple demo password
       login({ type: 'admin', id: 'admin' });
+      generateDailyCode(); // Generate new daily code on admin login
       toast({
         title: "Login Successful!",
         description: "Welcome to Admin Dashboard",
@@ -36,10 +38,10 @@ export const LoginPage = () => {
   };
 
   const handleStudentLogin = () => {
-    if (!studentId || !studentName || !department) {
+    if (!studentId || !studentName || !department || !dailyCode) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all fields",
+        description: "Please fill in all fields including daily code",
         variant: "destructive",
       });
       return;
@@ -53,16 +55,24 @@ export const LoginPage = () => {
     );
 
     if (student) {
-      login({ 
-        type: 'student', 
-        id: studentId, 
-        name: studentName, 
-        department: department as Department 
-      });
-      toast({
-        title: "Login Successful!",
-        description: `Welcome ${studentName}!`,
-      });
+      try {
+        login({ 
+          type: 'student', 
+          id: studentId, 
+          name: studentName, 
+          department: department as Department 
+        }, dailyCode);
+        toast({
+          title: "Login Successful!",
+          description: `Welcome ${studentName}!`,
+        });
+      } catch (error) {
+        toast({
+          title: "Login Failed",
+          description: error instanceof Error ? error.message : "Invalid daily code",
+          variant: "destructive",
+        });
+      }
     } else {
       toast({
         title: "Login Failed",
@@ -231,11 +241,29 @@ export const LoginPage = () => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="dailyCode" className="flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Daily Login Code
+                </Label>
+                <Input
+                  id="dailyCode"
+                  type="text"
+                  placeholder="Enter today's login code from admin"
+                  value={dailyCode}
+                  onChange={(e) => setDailyCode(e.target.value)}
+                  className="h-12"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Get today's code from your admin panel
+                </p>
+              </div>
+
               <Button 
                 onClick={handleStudentLogin} 
                 className="w-full" 
                 size="lg"
-                disabled={!studentId || !studentName || !department}
+                disabled={!studentId || !studentName || !department || !dailyCode}
               >
                 <LogIn className="h-4 w-4 mr-2" />
                 Login as Student
